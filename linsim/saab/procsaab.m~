@@ -1,0 +1,3 @@
+load S2000-4.mat;Init2000;ev=eig(ALONG)
+T=2*pi./imag(ev)
+Thalf=log(2)./real(ev)

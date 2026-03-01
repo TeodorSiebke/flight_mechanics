@@ -1,0 +1,184 @@
+
+LINEARIZED LONGITUDINAL EQUATIONS OF MOTION FOR SAAB 2000 and 340
+
+
+Acknowledgement:  The models were provided by Jon Bergstrom, SAAB AB.
+
+
+Four cases are given for two different aircraft (Saab 2000 and Saab
+340):
+
+1, Approach, Flaps 20 degrees, gear down, Speed Vref (approach speed)
+   trimmed at slope -3 degrees.
+
+2, Cruise, Mach 0.5, H=20000ft
+
+3, Max cruise, Max altitude and Mach number for each aircraft.
+
+4, Go around, Max thrust, accelerated climb
+   5 degrees for Saab 2000 and 3 degrees for Saab 340.
+   Flaps 20, gear up.
+
+
+The files are:
+
+Saab 2000:
+
+S2000-1.mat             Matlab .mat file with data for each case
+S2000-2.mat
+S2000-3.mat
+S2000-4.mat
+Initlong2000.m          Sets up stability matrix ALONG and control
+matrix
+                        BLONG for longitudinal case, compare Etkin (4.9,18)
+                        Matrices are defined in SI-units.
+Linlong2000.m           Simulink model to be run
+Plotlong2000.m          Plots response after Simulink simulation
+
+Same thing for Saab 340:
+
+S340-1.mat
+S340-2.mat
+S340-3.mat
+S340-4.mat
+Initlong340.m
+Linlong340.m
+Plotlong340.m
+
+
+Example session:
+----------------
+
+>> load S2000-3
+>> Initlong2000         Set up matrices etc
+>> eig(ALONG)           Gives the longitudinal stability eigenvalues
+>> Linlong2000          Set up Simulink
+>> Plotlong2000         Plot response
+
+Autopilot:
+----------
+
+The Saab 2000 model has a simplified autopilot which may be
+incorporated by adjusting the gain K in the block that you want to
+activate. Set K to the general, speed compensated gain KE to activate
+and adjust the resp.  PID gains.
+
+The gains are appropriate for theta-control, but other may need to be
+adjusted.  The reference signal can be given in the step-box by each
+PID regulator. Note that the reference signal is a delta to the
+trimmed value.
+
+
+Dictionary over Matlab variables available after data load:
+-----------------------------------------------------------
+
+Saab 2000:
+
+
+TIME    Time in seconds, Usually initial time equal to zero
+MASS    Mass of aircraft in kg
+XCGMAC  Distance centre-of-gravitity to neutral point in % of reference chord
+DFG     Deflection Flap in Degrees.
+LG       Landing gear position. 0=Up, 1=Dn
+	
+HPFOOT  Pressure altitude in feet. (eqv. geometrical for ISA conditions)
+CASKNOT Calibrated airspeed in knots
+MACH    Mach number
+CF      Thrust coefficient, average of the two engines
+QA      Dynamic pressure in Pascal
+	
+SREF    Reference area in m^2
+CREF	Reference chord in m
+BREF	Reference span in m
+TAS	True airspeed in m/s
+TASKNOT True airspeed in knots
+	
+AH11    Element of Lateral matrix Etkin (4.9,19)
+AH12	
+AH13	
+AH14	
+ALFAG	Angle of attack in degrees
+	
+AH21    
+AH22	
+AH23	
+AH24	
+BETAG	Angle of yaw in degrees
+	
+AH31    
+AH32	
+AH33	
+AH34	
+PHIG    Bank angle in degrees
+	
+AH41    
+AH42	
+AH43	
+AH44	
+THEG    Angle of elevation in degrees
+	
+BH11    Lateral control matrix, Etkin (7.9,3)
+BH12	
+BV11	Longitudinal control matrix, Etkin (7.6,4)
+BV12	
+THRUSTL Left engine thrust in Newtons
+	
+BH21    
+BH22	
+BV21	
+BV22	
+THRUSTR Right engine thrust in Newtons
+	
+BH31    
+BH32	
+BV31	
+BV32	
+MAXDRY  Max thrust per engine at current alt. ,temp, and speed.
+	
+BH41    
+BH42	
+BV41	
+BV42	
+PROPRPM Propeller revolutions per minute
+	
+AV11    Element of longitudinal matrix, Etkin (4.9,18)
+AV12	
+AV13	
+AV14	
+IX  	Moment of inertia [kg m^2], Etkin p 97
+	
+AV21    
+AV22	
+AV23	
+AV24	
+IY      Moment of inertia, Etkin p 97
+	
+AV31    
+AV32	
+AV33	
+AV34	
+IZ      Moment of inertia, Etkin p 97
+	
+AV41    
+AV42	
+AV43	
+AV44	
+IZX     Product of inertia, Etkin p 97
+	
+U       Speed in body x-direction, m/s
+W	Speed in body z-direction, m/s
+
+
+Saab 340 specific in cases they are different from Saab 2000:
+
+
+HFOOT                   Altitude in feet
+
+GHij (i=1..4,j=1..4)    Element of Lateral matrix Etkin (4.9,19)
+
+BHij (i=1..4,j=1..2)    Lateral control matrix, Etkin (7.9,3)
+
+BVij (i=1..4,j=1..2)    Longitudinal control matrix, Etkin (7.6,4)
+
+GVij (i=1..4,j=1..4)    Element of longitudinal matrix, Etkin (4.9,18)
+

@@ -1,0 +1,43 @@
+%Init2000.m 
+
+q = QA(1) ;
+m = MASS(1) ;
+Iy = IY(1) ;
+u0=TAS(1);
+theta0=THEG(1)*pi/180;
+
+ALONG = [ AV11(1) AV12(1) AV13(1) AV14(1)
+	  AV21(1) AV22(1) AV23(1) AV24(1)
+	  AV31(1) AV32(1) AV33(1) AV34(1)
+	  AV41(1) AV42(1) AV43(1) AV44(1)] ;
+
+BLONG = [ BV11(1) BV12(1)
+	  BV21(1) BV22(1)
+	  BV31(1) BV32(1)
+	  BV41(1) BV42(1)  ] ;
+
+ALATE = [ AH11(1) AH12(1) AH13(1) AH14(1)
+	  AH21(1) AH22(1) AH23(1) AH24(1)
+	  AH31(1) AH32(1) AH33(1) AH34(1)
+	  AH41(1) AH42(1) AH43(1) AH44(1)] ;
+
+BLATE = [ BH11(1) BH12(1)
+	  BH21(1) BH22(1)
+	  BH31(1) BH32(1)
+	  BH41(1) BH42(1)  ] ;
+
+% Autopilot things
+
+KE = 200*200/(CASKNOT(1)*CASKNOT(1));
+
+KEPGAM = -3E-3 ;
+KEDGAM =  1.9E-2 ;
+KEIGAM = -1.2E-4 ;
+
+KEPROC = -3.3E-5;
+KEDROC = 1.9E-2 ;
+KEIROC = -7.9E-7;
+
+KEPTHE = -1.0;
+KEDTHE = 0.6;
+KEITHE = -0.15;

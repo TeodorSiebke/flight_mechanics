@@ -1,0 +1,123 @@
+All team notes ok!
+
+Check wb_schedule.pdf
+
+I have added a subfolder to windex_xfoil with the Stuttgart airfoil
+wind tunnel test data I demonstrated in class last week.
+
+> We chose to use Xflr5 instead of the Matlab codes provided
+
+BEWARE:
+Xflr5 is an alternative way to run Xfoil, may not work to solve problems
+to come.
+
+> Lot of files on the canvas, difficulties to find the ones we wanted to use
+> Maybe make a file per task ?
+
+At this stage, use the nonlinear lifting line model and compare to
+wind tunnel test data in folders.
+
+Read Drela Appendix E and ch 5.5
+
+Download folder "nonlinear_lifting_line"
+
+Copy main_simple.m to main_wtm2.m
+Edit main_wtm2.m so that make_wtm2.m is used
+
+Add geometry to make_wtm2.m from "finite_wing/Geometry"
+
+Compare with wind tunnel test data in "Matlab_tunneldata"
+
+Remember: Wind tunnel model uses flap setting delta=-5 degrees
+
+After fs=flight_state( ...
+
+Set:
+
+fs.delta=fs.delta-5*pi/180
+
+Comment on how well Cm, CD, CL etc are modeled.
+
+This is a validation step to be done before using the NLL for the Windex
+
+> Some Xfoil program encountered the following error when trying to
+> load the airfoils:
+
+File OPEN error. Nonexistent file: windex1200_originalprofil.dat *** LOAD NOT
+COMPLETED ***
+
+This means that the profile data is not in the current folder.
+
+> Should we take into account the fuselage part of the finite wing when doing ?
+
+This is optional, Either model it, or say something about how much different
+the data will be in different coefficients.  This is a validation, the
+purpose is to convince you on how accurate these things can be modeled.
+
+> What are the experimental datas to use ? Matlab_tunneldata
+
+For the finite wing validation, yes!
+
+> Is the volume ratio of the stabilizer the same as the volume of the
+  stabilizer?
+
+No, it is a nondimensional number:
+
+lt*St/(S*c)
+
+> Are we going to do stick free calculations and modelling?
+
+This is optional as it is slightly more complicated, you need an
+additional equation stating that the hinge moment is zero.
+
+> Is a 9% static margin reasonable?
+> Is a 0.2914 ≤ 𝑥𝑛 ≤ 0.294 reasonable?
+
+This is really for you to figure out and motivate.
+
+Better estimates are coming when modeling is improved.
+
+> Difficult to interpret and understand the data from the flightMec data
+> sheet
+
+
+
+> Why assume that the neutral point of the wing is 25% of the chord.
+
+This is the first estimate, remember that this results is based on
+a very thin airfoil in potenatial flow.
+
+Actual airfoils in viscous flow will show a neutral point slightly
+different from quarter chord.  Further, it is only a "point" when
+CL and Cm are constant functions.
+
+> Though in Xfoil, with those parameters, the Cm is alfa-dependent
+(Cm_alfa is around 0.17).  Where does this difference come from?
+
+See above.
+
+> Wrong assumption of 25% or errors in Xfoil ?
+
+Unlikely errors in Xfoil, but misinterpretion on how to use it is
+more likely.
+
+> Understanding if the focus of the work should be the Windex or MERA
+> aircraft (mass would be different between both).
+
+We focus on the actual aircraft that we have and you get to see on
+Friday.  It is the MERA without motor and batteries, as this is what
+has been flown.  Geometry is very similar, mass properties are the
+main differences.
+
+> Prepare for Friday
+
+Determine center of mass for different pilots
+
+Check essential measurements
+
+Datum is wing root leading edge
+
+Control surface deflections
+
+Canopy mass 6.47 kg, center of mass 550 mm ahead of datum
+

@@ -1,0 +1,16 @@
+Reference data for the finite wing
+
+Reference area: Sref=0.2781 m*m
+Reference span: b=1.125 meter
+Reference chord: cref=0.2471 meter
+
+Full geometry data is given in the subfolder "Geometry" under "Finite wing"
+
+Projection drawings are given in the pdf files
+
+The step file (version 2.14) contains the complete geometry
+
+For the roll damping Clp lab:
+
+The wing in xfoil coordinates is rotated 1.7184 degrees
+nose up with respect to the axis of rotation.

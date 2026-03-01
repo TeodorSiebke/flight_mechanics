@@ -1,0 +1,17 @@
+Fields of fs:
+    {'alpha'         }
+    {'beta'          }
+    {'uref'          }
+    {'omega'         }
+    {'alt'           }
+    {'rho'           }
+    {'poo'           }
+    {'aoo'           }
+    {'nu'            }
+    {'vb'            }
+    {'delta'         }
+    {'delta_flap'    }
+    {'delta_elevator'}
+    {'delta_aileron' }
+    {'delta_rudder'  }
+

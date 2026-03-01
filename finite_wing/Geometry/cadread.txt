@@ -1,0 +1,6 @@
+The wind tunnel model and sting are available also as CAD data
+
+finitewing.stl can be viewed in Matlab using the stlread and trisurf commands.
+
+finitewing.stp is a CAD file in the STEP 214 format that may be
+read by many CAD software systems.
