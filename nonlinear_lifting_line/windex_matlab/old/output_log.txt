@@ -1,5 +1,0 @@
-Starting load_data...
-wxwing_d-10_re3e5.txt: Range [-5.00, 15.00], 36 points
-wxwing_d10_re3e5.txt: Range [-5.00, 15.00], 41 points
-wxwing_re3e5.txt: Range [-4.00, 20.00], 121 points
-Finished load_data.

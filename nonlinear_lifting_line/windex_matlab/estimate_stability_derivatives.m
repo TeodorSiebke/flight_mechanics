@@ -9,7 +9,7 @@ function [results, table_out] = estimate_stability_derivatives(V, alpha_deg)
 % alpha_deg: Reference Angle of Attack [deg]
 
     if nargin < 1; V = 30; end
-    if nargin < 2; alpha_deg = 2; end
+    if nargin < 2; alpha_deg = 3.43; end
 
     addpath('../matlab');
     acg = make_windex();

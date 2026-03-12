@@ -13,19 +13,21 @@ h_vec = 500:500:10000;  % Altitude range (m)
 n_v = length(v_vec);
 n_h = length(h_vec);
 
-% Controller Gains (Matches elevator_level_flight.m)
-% Optimized for 30 m/s stability at 1000m (T2D > 200s)
-Kp_h = 0.005093;
-Ki_h = 0.000209;
-Kd_h = 0.011718;
-Kq   = 0.418435;
+% Controller Gains (Cruise Smoothed)
+Kp_v = 0.001785;
+Ki_v = 0.000259;
+Kd_v = 0.018147;
+Kq   = 0.054794;
 
 % Storage for metrics
 % 1. Damping ratio of the dominant mode
 % 2. Time-to-half (s) for stability visualization
-damping_matrix = zeros(n_h, n_v);
-t_half_matrix = zeros(n_h, n_v);
+damping_matrix = NaN(n_h, n_v);
+t_half_matrix = NaN(n_h, n_v);
 stability_flag = zeros(n_h, n_v);
+
+% Initial guess for the first point
+x_tr = [v_vec(1) 0.5 0 0.05 0 h_vec(1) 0 0.06 0.1]';
 
 fprintf('Starting Envelope Sweep (%d points)...\n', n_v * n_h);
 
@@ -36,7 +38,7 @@ for i = 1:n_h
         v_target = v_vec(j);
         
         % A. TRIM THE AIRCRAFT
-        % [u w q theta x h fuel de dp]
+        % Standard guess for EACH point to prevent error propagation
         x_tr = [v_target 0.5 0 0.05 0 h_target 0 0.06 0.1]';
         ivar = [1 2 4 8 9]; ifun = [1 2 3 6 8];
         xt = x_tr(ivar);
@@ -44,14 +46,16 @@ for i = 1:n_h
         for iter = 1:50
             x_tr(ivar) = xt;
             xd = fplmod(0, x_tr, fsm);
-            res = xd(ifun); res(5) = res(5) - v_target;
+            res = [xd(1); xd(2); xd(3); xd(6); sqrt(x_tr(1)^2+x_tr(2)^2)-v_target];
             if norm(res) < 1e-10, converged = true; break; end
-            xs = 1e-7; J = zeros(5,5);
+            xs = 1e-8; J = zeros(5,5);
             for k = 1:5
                 xh = x_tr; xh(ivar(k)) = xh(ivar(k)) + xs;
                 xmh = x_tr; xmh(ivar(k)) = xmh(ivar(k)) - xs;
                 xdh = fplmod(0, xh, fsm); xdm = fplmod(0, xmh, fsm);
-                J(:,k) = (xdh(ifun) - xdm(ifun)) / (2*xs);
+                resh = [xdh(1); xdh(2); xdh(3); xdh(6); sqrt(xh(1)^2+xh(2)^2)-v_target];
+                resm = [xdm(1); xdm(2); xdm(3); xdm(6); sqrt(xmh(1)^2+xmh(2)^2)-v_target];
+                J(:,k) = (resh - resm) / (2*xs);
             end
             xt = xt - 0.7 * (J \ res);
         end
@@ -59,23 +63,17 @@ for i = 1:n_h
         
         if ~converged
             fprintf('  V=%.1f H=%.0f: FAILED TO TRIM\n', v_target, h_target);
-            stability_flag(i,j) = 0; % Mark as unstable
-            damping_matrix(i,j) = 0; % No damping if not trimmed
             continue;
         end
         
         % B. LINEARIZATION
-        % Augmented State: [u w q theta h h_int]
-        % (We ignore x_dist and fuel for stability analysis)
-        % x_aug = [x(1) x(2) x(3) x(4) x(6) x_int]
-        state_idx = [1 2 3 4 6];
-        n_aug = 6;
+        % Augmented State: [u w q theta v_int]
+        state_idx = [1 2 3 4];
+        n_aug = 5;
         A = zeros(n_aug, n_aug);
         xs_lin = 1e-5;
         
-        % Construct the wrapper for the closed-loop system
-        % x_vec: [u w q theta h h_int]
-        cl_system = @(x_vec) closed_loop_dynamics(x_vec, x_tr, fsm, Kp_h, Ki_h, Kd_h, Kq, h_target);
+        cl_system = @(x_vec) closed_loop_dynamics(x_vec, x_tr, fsm, Kp_v, Ki_v, Kd_v, Kq, v_target);
         
         for k = 1:n_aug
             xh = [x_tr(state_idx); 0]; xh(k) = xh(k) + xs_lin;
@@ -91,9 +89,8 @@ for i = 1:n_h
         real_parts = real(eg);
         imag_parts = imag(eg);
         
-        % Soft Stability: Accept real parts if Time-to-Double > 200s
-        % Threshold = ln(2)/200 approx 0.00346
-        stability_threshold = log(2)/200;
+        % Practical Stability: Accept real parts if Time-to-Double > 60s
+        stability_threshold = log(2)/60;
         stability_flag(i,j) = all(real_parts < stability_threshold); 
         
         % Metric 1: Minimum Damping Ratio (Oscillatory modes)
@@ -120,90 +117,103 @@ figure('Name', 'Control System Performance Sweep', 'Color', 'w', 'Position', [10
 [V_grid, H_grid] = meshgrid(v_vec, h_vec);
 
 subplot(1,2,1);
-imagesc(v_vec, h_vec, damping_matrix);
+set(gca, 'Color', [0.8 0.8 0.8]); % Gray background for NaN
+imagesc(v_vec, h_vec, damping_matrix, 'AlphaData', ~isnan(damping_matrix));
 set(gca, 'YDir', 'normal');
 colorbar; colormap(gca, parula);
 title('Damping Ratio \zeta (Higher is Better)');
 xlabel('Airspeed (m/s)'); ylabel('Altitude (m)');
-clim([0 1]); % Standard damping range
+clim([0 1]); 
 xticks(v_vec); % Show all airspeeds on X-axis
 
 % Add Acceptable Envelope Contour (e.g., Zeta >= 0.3)
 hold on;
-[C, h_cont] = contour(V_grid, H_grid, damping_matrix, [0.3 0.3], 'r', 'LineWidth', 2.5);
-clabel(C, h_cont, 'FontSize', 10, 'Color', 'r', 'FontWeight', 'bold');
-legend(h_cont, 'Acceptable Envelope (\zeta \geq 0.3)', 'Location', 'southoutside');
+[~, h_cont] = contour(V_grid, H_grid, damping_matrix, [0.3 0.3], 'r', 'LineWidth', 2.5, 'DisplayName', 'Acceptable Envelope (\zeta \geq 0.3)');
+% No legend for imagesc/plot, only for h_cont
+legend(h_cont, 'Location', 'southoutside');
 
 subplot(1,2,2);
-% Plot Stability Intensity Map (1/T)
-% Stability logic:
-% Stable (lambda < 0): Display as -1/T_half -> highly negative is Deep Green
-% Unstable (lambda > 0): Display as 1/T_double -> highly positive is Deep Red
-% Neutral (lambda = 0): Display as 0 -> White
+set(gca, 'Color', [0.8 0.8 0.8]); % Gray for NaN (Trim Failure)
 intensity_map = t_half_matrix;
-imagesc(v_vec, h_vec, intensity_map);
+imagesc(v_vec, h_vec, intensity_map, 'AlphaData', ~isnan(intensity_map));
 set(gca, 'YDir', 'normal');
 
-% Custom Divergent Colormap: Green (Stable) -> White (Neutral) -> Red (Unstable)
-% We want highly negative (Green) -> zero (White) -> highly positive (Red)
+% Custom Divergent Colormap
 n_colors = 128;
-cmap_g = [linspace(0,1,n_colors/2)', linspace(1,1,n_colors/2)', linspace(0,1,n_colors/2)']; % Green to White
-cmap_r = [linspace(1,1,n_colors/2)', linspace(1,0,n_colors/2)', linspace(1,0,n_colors/2)']; % White to Red
+cmap_g = [linspace(0.0, 0.8, n_colors/2)', linspace(0.3, 0.8, n_colors/2)', linspace(0.0, 0.8, n_colors/2)']; % Deeper Forest Green
+cmap_r = [linspace(0.8, 0.6, n_colors/2)', linspace(0.8, 0.0, n_colors/2)', linspace(0.8, 0.0, n_colors/2)']; % Dark Crimson Red
 cmap = [cmap_g; cmap_r];
 colormap(gca, cmap);
 
-% Symmetric limit to center white at 0 (Inf seconds)
-% Set limit to 0.1 (Rate = 1/10s) so fast modes (>10s) are saturated
-% and slow modes (100s = 0.01) are faint (10% intensity)
-max_viz = 0.1; 
+max_viz = 0.5; % Slower saturation (0.5 instead of 0.1) softens the overall look
 clim([-max_viz max_viz]);
 
 cb = colorbar;
 % Custom labels for the colorbar to show seconds
-ticks = [-0.1 -0.05 -0.01 0 0.01 0.05 0.1];
+ticks = [-0.5 -0.2 -0.05 0 0.05 0.2 0.5];
 tick_labels = cell(size(ticks));
 for k = 1:length(ticks)
     if ticks(k) < -0.0001
-        tick_labels{k} = sprintf('T_{1/2}=%.0fs', 1/abs(ticks(k)));
+        tick_labels{k} = sprintf('T_{1/2}=%.1fs', 1/abs(ticks(k)));
     elseif ticks(k) > 0.0001
-        tick_labels{k} = sprintf('T_{2}=%.0fs', 1/ticks(k));
+        tick_labels{k} = sprintf('T_{2}=%.1fs', 1/ticks(k));
     else
         tick_labels{k} = 'Inf (Neutral)';
     end
 end
 set(cb, 'Ticks', ticks, 'TickLabels', tick_labels);
 
+% --- ADD BLACK STRIPED HATCHING FOR NaN ---
+for ax_idx = 1:2
+    subplot(1,2,ax_idx);
+    hold on;
+    [row, col] = find(isnan(damping_matrix));
+    for k = 1:length(row)
+        % Cell bounds
+        v = v_vec(col(k)); h = h_vec(row(k));
+        dv = 2.5; dh = 250; % Half-widths
+        % Parallel diagonal stripes (Black Striped)
+        % Using plot with HandleVisibility off to keep legend clean
+        plot([v-dv v], [h h+dh], 'k', 'LineWidth', 0.8, 'HandleVisibility', 'off');
+        plot([v v+dv], [h-dh h], 'k', 'LineWidth', 0.8, 'HandleVisibility', 'off');
+    end
+end
+
 title('Stability (Fast = Deep Color, 100s+ = Faint)');
 xlabel('Airspeed (m/s)'); ylabel('Altitude (m)');
 xticks(v_vec); % Show all airspeeds on X-axis
-
-sgtitle('Elevator PID Performance across Altitude-Speed Envelope');
+sgtitle('Elevator PID Performance: Airspeed-Hold Mode');
 saveas(gcf, 'control_performance_envelope.png');
 
 fprintf('\nAnalysis complete. Heatmaps saved.\n');
 
 % --- HELPER: CLOSED LOOP DYNAMICS ---
-function xdot_aug = closed_loop_dynamics(x_vec, x_tr, fsm, Kp, Ki, Kd, Kq, h_target)
-    % x_vec: [u w q theta h h_int]
+function xdot_aug = closed_loop_dynamics(x_vec, x_tr, fsm, Kp, Ki, Kd, Kq, v_target)
+    % x_vec: [u w q theta v_int]
     u = x_vec(1);
     w = x_vec(2);
     q = x_vec(3);
     theta = x_vec(4);
-    h = x_vec(5);
-    h_int = x_vec(6);
+    v_int = x_vec(5);
     
     de_trim = x_tr(8);
     dp_trim = x_tr(9);
     
-    % PID Logic
-    h_err = h_target - h;
-    h_dot = - ( -sin(theta)*u + cos(theta)*w );
-    de = de_trim - (Kp * h_err + Ki * h_int - Kd * h_dot) + Kq * q;
+    v_curr = sqrt(u^2 + w^2);
+    v_err = v_target - v_curr;
+    
+    % Get physics xdot for v_dot estimation
+    xf_tmp = [u; w; q; theta; 0; x_tr(6); 0; de_trim; dp_trim];
+    xd_tmp = fplmod(0, xf_tmp, fsm);
+    v_dot = (u*xd_tmp(1) + w*xd_tmp(2)) / v_curr;
+    
+    % PID Logic (Speed on Elevator) - Kd correctly subtracted for damping
+    de = de_trim + (Kp * v_err + Ki * v_int - Kd * v_dot) + Kq * q;
     
     % Full state for fplmod
-    xf = [u; w; q; theta; 0; h; 0; de; dp_trim];
+    xf = [u; w; q; theta; 0; x_tr(6); 0; de; dp_trim];
     xd_phys = fplmod(0, xf, fsm);
     
-    % Augmented derivative
-    xdot_aug = [xd_phys(1); xd_phys(2); xd_phys(3); xd_phys(4); xd_phys(6); h_err];
+    % Augmented derivative [udot wdot qdot thetadot v_err]
+    xdot_aug = [xd_phys(1); xd_phys(2); xd_phys(3); xd_phys(4); v_err];
 end

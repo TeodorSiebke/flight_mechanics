@@ -105,6 +105,7 @@ for s = 1:length(sm_targets)
         speed_data(v_idx).speed = vset;
         speed_data(v_idx).eig = eg_sorted;
         speed_data(v_idx).mode = mode_info;
+        speed_data(v_idx).de = x(8) * 180 / pi; % Elevator deflection in degrees
     end
     all_results(s).speed_data = speed_data;
 end
@@ -112,6 +113,7 @@ end
 % --- PLOTTING ---
 figure(1); clf; set(gcf, 'Position', [100 100 1000 500], 'Color', 'w');
 figure(2); clf; set(gcf, 'Position', [100 100 700 700], 'Color', 'w');
+figure(3); clf; set(gcf, 'Position', [100 100 700 500], 'Color', 'w');
 
 for s = 1:length(sm_targets)
     sd = all_results(s).speed_data;
@@ -143,6 +145,13 @@ for s = 1:length(sm_targets)
     
     subplot(2,1,2); hold on; grid on;
     plot(vs(valid), t_slow(valid), [colors{s} '-o'], 'LineWidth', 1.2, 'MarkerSize', 4, 'DisplayName', labels{s});
+
+    % Figure 3: Trimmed Elevator Deflection
+    if isfield(sd, 'de')
+        de = [sd.de];
+        figure(3); hold on; grid on;
+        plot(vs(valid), de(valid), [colors{s} '-^'], 'LineWidth', 1.2, 'MarkerSize', 4, 'DisplayName', labels{s});
+    end
 end
 
 % Formatting Figure 1
@@ -174,7 +183,15 @@ line(xlim, [0 0], 'Color', 'k', 'LineStyle', '--', 'HandleVisibility', 'off');
 
 sgtitle('Stability Mode Evolution vs Static Margin');
 
+% Formatting Figure 3
+figure(3);
+title('Trimmed Elevator Deflection vs Airspeed');
+xlabel('Airspeed (m/s)'); ylabel('Elevator Deflection (deg)');
+legend('Location', 'best', 'FontSize', 9);
+line(xlim, [0 0], 'Color', 'k', 'LineStyle', '--', 'HandleVisibility', 'off');
+
 fprintf('\nSaving refined plots...\n');
 saveas(1, 'task6_root_locus.png');
 saveas(2, 'task6_time_to_half.png');
+saveas(3, 'task6_elevator_trim.png');
 fprintf('\nAnalysis complete.\n');
