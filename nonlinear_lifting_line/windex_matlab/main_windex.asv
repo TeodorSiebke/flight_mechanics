@@ -50,7 +50,7 @@ mCL=[]; mCM=[]; mCD=[];
 
 % Loop over several elevator settings
 
-devec=[-10 -8 -6 -4 -2 0  2 0]*pi/180;
+devec=[-10 -8 -6 -4 -2 0  2 4]*pi/180;
 
 for ide=1:length(devec)
 
@@ -62,8 +62,8 @@ fs.delta_elevator=devec(ide);
 
 % Approximate position of the aerodynamic center 
 
-CLa = (vCL(8) - vCL(2)) / (valpha(8) - valpha(2))
-CMa = (vCM(8) - vCM(2)) / (valpha(8) - valpha(2))
+CLa = (vCL(8) - vCL(3)) / (valpha(7) - valpha(3))
+CMa = (vCM(8) - vCM(3)) / (valpha(7) - valpha(3))
 xac = acg.pref(1) - CMa/CLa * acg.cref
 
 mCL=[mCL vCL];mCD=[mCD vCD];mCM=[mCM vCM];

@@ -69,9 +69,12 @@ end
 
 %% --- PLOTTING ---
 figure(1); clf; set(gcf, 'Color', 'w', 'Name', 'Stall Maneuver');
-subplot(3,1,1); plot(t_vec_s, alpha_s*180/pi, 'b', 'LineWidth', 1.5); grid on;
-ylabel('Alpha (deg)'); title('Maneuver 1: Stall (V_{start}=30m/s)');
-line(xlim, [10 10], 'Color', 'r', 'LineStyle', '--'); % Stall target
+subplot(3,1,1); hold on;
+plot(t_vec_s, alpha_s*180/pi, 'b', 'LineWidth', 1.5, 'DisplayName', 'Alpha');
+plot(t_vec_s, interp1(t_stall, de_stall, t_vec_s)*180/pi, 'r--', 'LineWidth', 1.2, 'DisplayName', 'Elevator');
+grid on; ylabel('Angle (deg)'); title('Maneuver 1: Stall (V_{start}=30m/s)');
+line(xlim, [10 10], 'Color', 'k', 'LineStyle', '--', 'HandleVisibility', 'off'); % Stall target
+legend('Location', 'best');
 
 subplot(3,1,2); plot(t_vec_s, Y_s(:,6), 'k', 'LineWidth', 1.5); grid on;
 ylabel('Altitude (m)');
@@ -95,8 +98,11 @@ line(xlim, [6 6], 'Color', 'k', 'LineStyle', '--'); % 6g Limit
 subplot(2,2,3); plot(t_vec_l, Y_l(:,1), 'g', 'LineWidth', 1.5); grid on;
 ylabel('Velocity u (m/s)'); xlabel('Time (s)');
 
-subplot(2,2,4); plot(t_vec_l, alpha_l*180/pi, 'm', 'LineWidth', 1.5); grid on;
-ylabel('Alpha (deg)'); xlabel('Time (s)');
+subplot(2,2,4); hold on;
+plot(t_vec_l, alpha_l*180/pi, 'm', 'LineWidth', 1.5, 'DisplayName', 'Alpha');
+plot(t_vec_l, interp1(t_loop, de_loop, t_vec_l)*180/pi, 'r--', 'LineWidth', 1.2, 'DisplayName', 'Elevator');
+grid on; ylabel('Angle (deg)'); xlabel('Time (s)');
+legend('Location', 'best');
 
 fprintf('\nSimulations Complete. Review the plots.\n');
 

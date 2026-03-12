@@ -76,9 +76,10 @@ g = 9.81;
 W = mass * g;
 rho = 1.225; % Sea level density
 
-sm_vec = [0.03, 0.09, 0.15, 0.30];
+sm_vec = [0.03, 0.09, 0.15, 0.30, 0.09];
+flap_vec = [0, 0, 0, 0, 20]; % degrees
 V_vec = [22:0.5:24, 26:2:60]; % m/s
-n_sm = length(sm_vec);
+n_configs = length(sm_vec);
 n_v = length(V_vec);
 
 % Storage
@@ -86,15 +87,16 @@ trim_results = struct();
 
 fprintf('\nStarting Trim vs Airspeed Analysis (Mass = %.0f kg)...\n', mass);
 
-for k = 1:n_sm
+for k = 1:n_configs
     current_sm = sm_vec(k);
+    current_flap = flap_vec(k);
     h_cg = h_n - current_sm;
     X_cg = X_LE_wing_mac + h_cg * c_ref;
     
     % Update CG
     acg.pref = [X_cg, 0, 0];
     
-    fprintf('\nConfig %d: SM = %.0f%%, CG = %.4f m\n', k, current_sm*100, X_cg);
+    fprintf('\nConfig %d: SM = %.0f%%, Flaps = %.0f deg, CG = %.4f m\n', k, current_sm*100, current_flap, X_cg);
     fprintf('%-10s | %-10s | %-10s | %-10s\n', 'V [m/s]', 'CL_req', 'Alpha', 'Delta_e');
     
     res_V = zeros(1, n_v);
@@ -116,7 +118,7 @@ for k = 1:n_sm
         % Solve for [alpha, delta_e]
         % Unknowns x = [alpha_rad, delta_e_rad]
         
-        obj_fun = @(x) trim_solver(x, acg, V, CL_req);
+        obj_fun = @(x) trim_solver(x, acg, V, CL_req, current_flap);
         
         try
             [x_sol, fval, exitflag] = fsolve(obj_fun, [al_guess, de_guess*pi/180], options);
@@ -144,6 +146,7 @@ for k = 1:n_sm
     end
     
     trim_results(k).SM = current_sm;
+    trim_results(k).Flap = current_flap;
     trim_results(k).V = res_V;
     trim_results(k).de = res_de;
     trim_results(k).alpha = res_al;
@@ -175,9 +178,9 @@ fs_un.delta_elevator = 0; fs_un.delta_rudder = 0; fs_un.delta_flap = 0; fs_un.de
 de_guess = 0;
 for i = 1:n_pts
     al = alpha_rad_sweep(i);
-    obj_fun_cm = @(de_rad) get_cm_val(acg, uoo, al, de_rad);
+    obj_fun_cm = @(de_rad) get_cm_val(acg, uoo, al, de_rad, 0);
     [de_sol_rad, ~, exitflag] = fsolve(obj_fun_cm, de_guess*pi/180, options);
-    [vCL, ~, ~] = plainpolar(acg, set_fs(acg, uoo, al, de_sol_rad), al);
+    [vCL, ~, ~] = plainpolar(acg, set_fs(acg, uoo, al, de_sol_rad, 0), al);
     trim_CL_ref(i) = vCL(1);
     de_guess = de_sol_rad * 180/pi;
 end
@@ -198,42 +201,42 @@ saveas(gcf, 'Windex_Trim_CL_NLL.png');
 
 % Figure 2: Elevator Deflection vs Airspeed (Multi-SM)
 figure('Name', 'Trim Elevator vs Speed', 'Color', 'w', 'Position', [750 100 600 500]);
-colors = ['r', 'b', 'g', 'm'];
+colors = ['r', 'b', 'g', 'm', 'c'];
 hold on;
-for k = 1:n_sm
+for k = 1:n_configs
+    label = sprintf('SM = %.0f%%, Flap = %.0f^o', trim_results(k).SM*100, trim_results(k).Flap);
     plot(trim_results(k).V, trim_results(k).de, [colors(k) '-o'], 'LineWidth', 1.5, ...
-        'DisplayName', ['SM = ' num2str(trim_results(k).SM*100) '%']);
+        'DisplayName', label);
 end
 grid on; xlabel('Airspeed [m/s]'); ylabel('Elevator Deflection [deg]');
 title(['Trim Elevator for Mass = ' num2str(mass) ' kg']);
-yline(10, 'k--', 'DisplayName', '\delta_e = 10 data'); 
-yline(-10, 'k--', 'DisplayName', '\delta_e = -10 data');
 legend('Location', 'best');
 saveas(gcf, 'Windex_Trim_DeltaE_vs_Speed.png');
 
 fprintf('\nDone. Figures saved.\n');
 
 %% HELPER FUNCTIONS
-function F = trim_solver(x, acg, V, CL_req)
+function F = trim_solver(x, acg, V, CL_req, delta_flap)
     alpha = x(1);
     de = x(2);
     
-    fs = set_fs(acg, V, alpha, de);
+    fs = set_fs(acg, V, alpha, de, delta_flap);
     [vCL, vCD, vCM] = plainpolar(acg, fs, alpha);
     
     F(1) = vCL(1) - CL_req;
     F(2) = vCM(1); % Cm = 0
 end
 
-function cm = get_cm_val(acg, V, alpha, de)
-    fs = set_fs(acg, V, alpha, de);
+function cm = get_cm_val(acg, V, alpha, de, delta_flap)
+    fs = set_fs(acg, V, alpha, de, delta_flap);
     [~, ~, vCM] = plainpolar(acg, fs, alpha);
     cm = vCM(1);
 end
 
-function fs = set_fs(acg, V, alpha, de)
+function fs = set_fs(acg, V, alpha, de, delta_flap)
     fs = flight_state(acg, V, 0, 0, 0);
     fs.alpha = alpha;
     fs.delta_elevator = de;
-    fs.delta_rudder = 0; fs.delta_flap = 0; fs.delta_aileron = 0;
+    fs.delta_flap = delta_flap * pi/180;
+    fs.delta_rudder = 0; fs.delta_aileron = 0;
 end
